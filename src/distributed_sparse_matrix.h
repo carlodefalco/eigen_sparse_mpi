@@ -34,27 +34,43 @@ private :
   bool mapped;
 
 public :
-
-  void
-  print_non_local ()
-  {
-    std::cout << "prc_ptr : \n";
-    for ( auto& i : non_local.prc_ptr)
-      std::cout << i << "\t";
-    std::cout << std::endl << std::endl;
-    for ( auto& i : non_local.row_ind)
-      std::cout << i << "\t";
-    std::cout << std::endl << std::endl;
-    for ( auto& i : non_local.col_ind)
-      std::cout << i << "\t";
-    std::cout << std::endl << std::endl;
-    for ( auto& i : non_local.a)
-      std::cout << i << "\t";
-    std::cout << std::endl << std::endl;
-  };
   
   using seq_type = Eigen::SparseMatrix<double,Eigen::RowMajor>;
 
+  int
+  memory_estimate ()
+  {
+    int mem = 0;
+    
+    mem += sizeof (mapped);
+    mem += sizeof (decltype(this->ranges)::value_type) * this->ranges.size ();
+    mem += sizeof (decltype(this->rank_nnz)::value_type) * this->rank_nnz.size ();
+
+    for (auto& i : this->val_buffers)
+      mem += sizeof (decltype(this->val_buffers)::key_type) + sizeof (decltype(this->val_buffers)::mapped_type::value_type) * i.second.size ();
+
+    for (auto& i : this->col_buffers)
+      mem += sizeof (decltype(this->col_buffers)::key_type) + sizeof (decltype(this->col_buffers)::mapped_type::value_type) * i.second.size ();
+
+    for (auto& i : this->row_buffers)
+      mem += sizeof (decltype(this->row_buffers)::key_type) + sizeof (decltype(this->row_buffers)::mapped_type::value_type) * i.second.size ();
+
+    mem += sizeof (decltype(this->non_local.prc_ptr)::value_type) * this->non_local.prc_ptr.size ();
+    mem += sizeof (decltype(this->non_local.row_ind)::value_type) * this->non_local.row_ind.size ();
+    mem += sizeof (decltype(this->non_local.col_ind)::value_type) * this->non_local.col_ind.size ();
+    mem += sizeof (decltype(this->non_local.a)::value_type) * this->non_local.a.size ();
+
+    mem += sizeof (mpirank);
+    mem += sizeof (mpisize);
+    mem += sizeof (comm);
+    mem += sizeof (is);
+    mem += sizeof (ie);
+
+    mem += this->nonZeros () * sizeof (Scalar) * sizeof (StorageIndex) + this->outerSize () * sizeof (StorageIndex);
+    
+    return mem;
+  }
+  
   void
   set_ranges (int is_, int ie_);
 
@@ -75,27 +91,6 @@ public :
 
   void
   assemble ();
-
-  void
-  csr (std::vector<double> &a,
-       std::vector<int> &col,
-       std::vector<int> &row,
-       int base = 0,
-       bool flag = false);
-
-  void
-  csr_update (std::vector<double> &a,
-              const std::vector<int> &col_ind,
-              const std::vector<int> &row_ptr,
-              int base = 0,
-              bool flag = false);
-
-  void
-  aij (std::vector<double> &a,
-       std::vector<int> &i,
-       std::vector<int> &j,
-       int base = 0,
-       bool flag = false);
 
   int
   owned_nnz ();
