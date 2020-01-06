@@ -13,17 +13,25 @@ main (int argc, char **argv)
   
   distributed_sparse_matrix A;
   int n =  std::sqrt (size);
-  int nN =  20;
+
+  // we want to create a partition into n * n
+  // subregions and assign each region to one
+  // rank, for this to work n*n must equal size
+  // if this is not the case we just fail and exit
+  // a more graceful exit would actually be nicer
+  assert (n*n == size);
+
+  // the number of grid cells per rank is nN * nN
+  // the total number of grind cells is N * N, the
+  // total number of grid nodes is ndofs
+  int nN =  60;
   int N = nN * n;
   int ndofs = ((N+1)*(N+1));
-  /*
-  std::cout << "rank " << rank
-            << ", n = " << n
-            << ", nN = " << nN
-            << ", N = " << N 
-            << ", ndofs =" << ndofs << "\n";
-  */
-  A.resize (ndofs, ndofs);
+  std::cout << "ndofs = " << ndofs << std::endl;
+
+  // the number of rows is inferred from the
+  // ranges, the nuber of columns must be specified
+  A.set_cols (ndofs);
   if (rank < size - 1)
     A.set_ranges (ndofs / size);
   else
@@ -32,23 +40,12 @@ main (int argc, char **argv)
   int partrow = rank / n;
   int partcol = rank % n;
 
-  /*
-    for (int nn = 0; nn < size ; ++nn)
-    {
-    if (rank == nn)
-    { 
-    std::cout << "rank " << rank
-    << ", partrow = "
-    << partrow << ", partcol = "
-    << partcol << ", A.rows() = " << A.rows()
-    << ", A.cols() = " << A.cols()
-    << std::endl;
-  */
-  for (int ii = 0; ii < nN; ++ii)    
+  
+  
+  for (int ii = 0; ii < nN; ++ii)
     for (int jj = 0; jj < nN; ++jj)
       {        
         int kk = jj + nN * partcol + (N + 1) * (ii + nN * partrow);               
-        //std::cout << "kk = " << kk << std::endl;
         std::array<int, 4> conn = {kk, kk+1, kk+N+1, kk+N+2};
         std::array<std::array<double, 4>, 4> loc =
           {  .25, -.125, -.125,    .0,
@@ -59,33 +56,25 @@ main (int argc, char **argv)
         for (int irow = 0; irow < 4; ++irow)
           for (int jcol = 0; jcol < 4; ++jcol)
             {
-              //std::cout << "(" << conn[irow] << "/" << A.rows() << ", " << conn[jcol] << "/" << A.cols() << ")" << std::endl;
               A.coeffRef(conn[irow],conn[jcol]) += loc[irow][jcol];
             }
       }
-  /*
-    }
-    MPI_Barrier (MPI_COMM_WORLD);
-    }
-  */
+ 
+  
+  
   
   A.assemble ();
 
-  //  std::cout << A << std::endl;
-  for (int nn = 0; nn < size ; ++nn)
+  for (int ii = 0; ii < size; ii++)
     {
-      if (rank == nn)
-        { 
-
-          std::cout << "rank " << rank << ", memory = "
-                    << A.memory_estimate ()  << ", nnz = "
-                    << A.nonZeros () << ", nrows = "
-                    << A.outerSize () << std::endl;
+      if (ii == rank)
+        {
+          //std::cout << A << std::endl;
+          std::cout << "rank " << rank << " done" << std::endl;
         }
       MPI_Barrier (MPI_COMM_WORLD);
     }
-
-  std::cout << "rank " << rank << " done" << std::endl;
+  
   MPI_Finalize ();
   return 0;
 }

@@ -70,6 +70,17 @@ public :
     
     return mem;
   }
+
+  // the number of rows is inferred from the
+  // ranges, the nuber of columns must be specified
+  // it would be probably better to enforce this
+  // somehow? add a required c'tor parameter?
+  // error out on assemble if cols not set?
+  void
+  set_cols (int cols_)
+  {
+    this->resize (this->rows (), cols_);
+  }
   
   void
   set_ranges (int is_, int ie_);
@@ -79,7 +90,7 @@ public :
 
   distributed_sparse_matrix (int is_, int ie_,
                              MPI_Comm comm_ = MPI_COMM_WORLD)
-    : distributed_sparse_matrix ()
+    : distributed_sparse_matrix (comm_)
   { set_ranges (is_, ie_); }
 
   distributed_sparse_matrix (MPI_Comm comm_ = MPI_COMM_WORLD)

@@ -26,7 +26,7 @@ distributed_sparse_matrix::set_ranges (int num_owned_)
                  1, MPI_INT, comm);
   for (auto irank = 0; irank < mpisize; ++irank)
     ranges[irank+1] += ranges[irank];
-
+  
   is = ranges[mpirank];
   ie = ranges[mpirank+1];
   this->resize (ranges.back (), this->cols ());
